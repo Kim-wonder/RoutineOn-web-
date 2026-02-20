@@ -1,11 +1,13 @@
-import { Alarm, Video } from '@/types';
+import { Alarm, Video, HistoryRecord } from '@/types';
 
 // F-01, F-02: 로컬 저장 관리 (FSD 섹션 4)
 const STORAGE_KEYS = {
   ALARMS: 'workout_alarms',
   VIDEOS: 'workout_videos',
   NOTIFICATIONS: 'workout_notifications',
+  HISTORY: 'workout_history',
 };
+
 
 export const storage = {
   // Alarms
@@ -14,17 +16,17 @@ export const storage = {
     const data = localStorage.getItem(STORAGE_KEYS.ALARMS);
     return data ? JSON.parse(data) : [];
   },
-  
+
   saveAlarms(alarms: Alarm[]): void {
     localStorage.setItem(STORAGE_KEYS.ALARMS, JSON.stringify(alarms));
   },
-  
+
   addAlarm(alarm: Alarm): void {
     const alarms = this.getAlarms();
     alarms.push(alarm);
     this.saveAlarms(alarms);
   },
-  
+
   updateAlarm(alarmId: string, updates: Partial<Alarm>): void {
     const alarms = this.getAlarms();
     const index = alarms.findIndex(a => a.alarmId === alarmId);
@@ -33,19 +35,19 @@ export const storage = {
       this.saveAlarms(alarms);
     }
   },
-  
+
   deleteAlarm(alarmId: string): void {
     const alarms = this.getAlarms().filter(a => a.alarmId !== alarmId);
     this.saveAlarms(alarms);
   },
-  
+
   // Videos
   getVideos(): Video[] {
     if (typeof window === 'undefined') return [];
     const data = localStorage.getItem(STORAGE_KEYS.VIDEOS);
     return data ? JSON.parse(data) : [];
   },
-  
+
   saveVideo(video: Video): void {
     const videos = this.getVideos();
     const existing = videos.findIndex(v => v.videoId === video.videoId);
@@ -56,9 +58,28 @@ export const storage = {
     }
     localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(videos));
   },
-  
+
   getVideo(videoId: string): Video | null {
     const videos = this.getVideos();
     return videos.find(v => v.videoId === videoId) || null;
   },
+
+  getAlarm(alarmId: string): Alarm | null {
+    const alarms = this.getAlarms();
+    return alarms.find(a => a.alarmId === alarmId) || null;
+  },
+
+  // History
+  getHistory(): HistoryRecord[] {
+    if (typeof window === 'undefined') return [];
+    const data = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  addHistory(record: HistoryRecord): void {
+    const history = this.getHistory();
+    history.push(record);
+    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+  },
 };
+

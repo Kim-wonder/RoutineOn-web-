@@ -11,6 +11,8 @@ import { ko } from 'date-fns/locale/ko';
 import NotificationManager from '@/components/NotificationManager';
 import Toast from '@/components/Toast';
 import AlarmModal from '@/components/AlarmModal';
+import BottomNav from '@/components/BottomNav';
+
 
 // Home 화면: F-09 알림 시간 경과 후 앱 실행 처리
 export default function HomePage() {
@@ -68,9 +70,21 @@ export default function HomePage() {
 
     try {
       openYouTubeVideo(todayVideo.videoId);
+
+      // 성공 기록 저장 (F-11)
+      if (nextAlarm) {
+        storage.addHistory({
+          id: Date.now().toString(),
+          alarmId: nextAlarm.alarm.alarmId,
+          date: format(new Date(), 'yyyy-MM-dd'),
+          timestamp: Date.now(),
+        });
+      }
+
       setShowAlarmModal(false);
       showToastMessage('운동 영상을 시작합니다');
     } catch (error) {
+
       showToastMessage('영상 실행에 실패했습니다');
     }
   };
@@ -94,7 +108,7 @@ export default function HomePage() {
   };
 
   const handleEditAlarm = (alarmId: string) => {
-    showToastMessage('수정 기능은 곧 추가됩니다');
+    window.location.href = `/setup?edit=${alarmId}`;
     setOpenMenuId(null);
   };
 
@@ -123,7 +137,7 @@ export default function HomePage() {
     <>
       {/* 고정 Width 컨테이너 */}
       <div className="min-h-screen bg-[#F5F5F5] flex justify-center">
-        <div className="w-full max-w-[480px] bg-[#F5F5F5] pb-20 relative">
+        <div className="w-full max-w-[480px] bg-[#F5F5F5] pb-32 relative">
           <NotificationManager />
           <Toast
             message={toastMessage}
@@ -140,136 +154,56 @@ export default function HomePage() {
           />
 
           {/* Header */}
-          <header className="px-6 pt-16 pb-8">
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-3xl font-light tracking-tight text-black">ROUTINE</h1>
+          <header className="px-6 pt-16 pb-8 text-center relative">
+            <h1 className="text-3xl font-light tracking-tight text-black">ROUTINES</h1>
+            <p className="text-sm text-gray-500 font-light mt-1 text-center">Manage your workout schedule</p>
+            <div className="absolute right-6 top-16">
               <Link
                 href="/setup"
                 className="w-10 h-10 rounded-full bg-[#FF6B35] flex items-center justify-center hover:bg-[#FF5722] transition shadow-sm"
               >
-                <span className="text-white text-2xl font-light leading-none">+</span>
+                <span className="text-white text-2xl font-light">+</span>
               </Link>
             </div>
-            {nextAlarm && (
-              <p className="text-sm text-gray-500 font-light">
-                {formatDate(nextAlarm.nextTrigger)}
-              </p>
-            )}
           </header>
 
           <div className="px-6 space-y-4">
-            {/* 요일 선택 표시 */}
-            {nextAlarm && (
-              <div className="flex gap-2 mb-6">
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-                  <div
-                    key={idx}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium transition ${nextAlarm.alarm.daysOfWeek.includes(idx)
-                        ? 'bg-[#FF6B35] text-white'
-                        : 'bg-[#E8E8E8] text-gray-400'
-                      }`}
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* 메인 알람 카드 또는 빈 상태 */}
-            {nextAlarm ? (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-                {/* 체크박스와 제목 */}
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-lg font-medium text-black mb-1">
-                      {nextAlarm.video?.title || 'Watch Workout Video'}
-                    </h2>
-                    {nextAlarm.video && (
-                      <p className="text-sm text-gray-500">{nextAlarm.video.channelName}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 영상 썸네일 */}
-                {nextAlarm.video?.thumbnailUrl && (
-                  <div className="relative rounded-xl overflow-hidden bg-[#E8E8E8] mb-4">
-                    <img
-                      src={nextAlarm.video.thumbnailUrl}
-                      alt={nextAlarm.video.title}
-                      className="w-full h-48 object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-16 h-16 rounded-full bg-black/80 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 실행 버튼 */}
-                <button
-                  onClick={handlePlayNow}
-                  className="w-full bg-black text-white py-4 rounded-xl font-medium hover:bg-gray-900 transition"
+            {allAlarms.length === 0 ? (
+              <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
+                <p className="text-gray-400 mb-6 font-light">No routines registered yet.</p>
+                <Link
+                  href="/setup"
+                  className="inline-block bg-[#FF6B35] text-white px-8 py-3 rounded-xl font-medium hover:bg-[#FF5722] transition shadow-lg shadow-orange-500/20"
                 >
-                  EXECUTE NOW
-                </button>
+                  Create Routine
+                </Link>
               </div>
             ) : (
-              <Link href="/setup">
-                <div className="bg-white rounded-2xl p-16 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition shadow-sm border border-gray-200">
-                  <div className="text-center">
-                    <div className="text-sm font-light text-gray-400 tracking-widest">ADD ROUTINE</div>
-                  </div>
-                </div>
-              </Link>
-            )}
+              allAlarms.map((alarm) => {
+                const video = storage.getVideo(alarm.videoId);
+                const daysKo = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-            {/* 알람 리스트 */}
-            {allAlarms.length > 0 && (
-              <div className="space-y-3 pt-4">
-                {allAlarms.map((alarm) => {
-                  const video = storage.getVideo(alarm.videoId);
-                  return (
-                    <div
-                      key={alarm.alarmId}
-                      className="bg-white rounded-xl p-4 flex items-center gap-4 shadow-sm border border-gray-200 relative"
-                    >
-                      {/* 체크박스 */}
-                      <button
-                        onClick={() => toggleAlarm(alarm.alarmId)}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition ${alarm.enabled
-                            ? 'bg-black'
-                            : 'bg-white border-2 border-gray-300'
-                          }`}
-                      >
-                        {alarm.enabled && (
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                return (
+                  <div key={alarm.alarmId} className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm relative group">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${alarm.enabled ? 'bg-[#FF6B35]/10 text-[#FF6B35]' : 'bg-gray-100 text-gray-300'}`}>
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                        )}
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <div className={`text-base font-medium mb-0.5 ${alarm.enabled ? 'text-black' : 'text-gray-400 line-through'}`}>
-                          {video?.title || 'Workout Routine'}
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {formatTime(alarm.time)} · {getDayLabel(alarm.daysOfWeek)}
+                        <div>
+                          <h3 className={`font-medium text-lg leading-tight transition ${alarm.enabled ? 'text-black' : 'text-gray-300'}`}>
+                            {alarm.title}
+                          </h3>
+                          <p className="text-[12px] text-gray-400 font-medium">
+                            {alarm.time} · {alarm.daysOfWeek.map(d => daysKo[d]).join(', ')}
+                          </p>
                         </div>
                       </div>
 
-                      {/* 더보기 메뉴 */}
-                      <div className="relative flex-shrink-0">
+                      {/* Top Right: More Menu */}
+                      <div className="relative">
                         <button
                           onClick={() => setOpenMenuId(openMenuId === alarm.alarmId ? null : alarm.alarmId)}
                           className="w-8 h-8 rounded-lg bg-[#F5F5F5] flex items-center justify-center hover:bg-[#E8E8E8] transition"
@@ -278,7 +212,7 @@ export default function HomePage() {
                         </button>
 
                         {openMenuId === alarm.alarmId && (
-                          <div className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-10 min-w-[100px]">
+                          <div className="absolute right-0 top-10 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-20 min-w-[100px]">
                             <button
                               onClick={() => handleEditAlarm(alarm.alarmId)}
                               className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-[#F5F5F5] transition"
@@ -295,26 +229,39 @@ export default function HomePage() {
                         )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {video && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={video.thumbnailUrl}
+                            alt={video.title}
+                            className="w-16 h-10 object-cover rounded-md flex-shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-gray-400 font-medium mb-0.5 uppercase tracking-wider">Video</p>
+                            <p className="text-xs text-gray-600 line-clamp-1 truncate">{video.title}</p>
+                          </div>
+                        </div>
+
+                        {/* Toggle Switch moved here */}
+                        <button
+                          onClick={() => toggleAlarm(alarm.alarmId)}
+                          className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${alarm.enabled ? 'bg-[#FF6B35]' : 'bg-gray-200'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${alarm.enabled ? 'left-5.5' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
 
           {/* Bottom Navigation */}
-          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-gray-200 px-6 py-4">
-            <div className="flex items-center justify-around max-w-md mx-auto">
-              <Link href="/" className="text-xs font-medium text-gray-400 hover:text-black transition">
-                HOME
-              </Link>
-              <Link href="/setup" className="text-xs font-medium text-[#FF6B35] hover:text-[#FF5722] transition">
-                ROUTINE
-              </Link>
-              <Link href="/stats" className="text-xs font-medium text-gray-400 hover:text-black transition">
-                STATS
-              </Link>
-            </div>
-          </nav>
+          <BottomNav />
+
         </div>
       </div>
     </>
